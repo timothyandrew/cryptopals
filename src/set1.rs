@@ -2,6 +2,9 @@ use std::str;
 use std::collections::HashMap;
 use std::str::from_utf8;
 
+use crate::util::decode_single_char_xor;
+use crate::util::file_to_lines;
+use crate::util::score_plaintext;
 use crate::util::{byte_array_to_hex, hex_to_base64, hex_to_byte_array};
 
 pub fn c1(s: &str) -> String {
@@ -21,46 +24,16 @@ pub fn c2(l: &str, r: &str) -> String {
   byte_array_to_hex(buf)
 }
 
-fn score_plaintext(s: &str) -> isize {
-  let s = s.to_lowercase();
-  let mut score: isize = 0;
-  let acc: HashMap<char, isize> = HashMap::new();
-
-  let freq = s.chars().fold(acc, |mut acc, c| {
-    let val = acc.entry(c).or_insert(0);
-    *val += 1;
-    acc
-  });
-
-  let pairs = vec![
-    ('e', 't'), ('t', 'a'), ('a', 'o'), ('o', 'i'), ('i', 'n'),
-    ('n', 's'), ('s', 'r'), ('r', 'h'), ('h', 'd'), ('d', 'l'), 
-    ('l', 'u'), ('u', 'c')
-  ];
-
-  for (l, r) in pairs {
-    if freq.contains_key(&l) && freq.contains_key(&r) && freq[&l] <= freq[&r] { 
-      score += 50; 
-    }
-  }
-
-  score
+pub fn c3(s: &str) -> String {
+  decode_single_char_xor(s).unwrap()
 }
 
-pub fn c3(s: &str) -> String {
-  let scores = (0..=255).map(|xor| {
-    let s = hex_to_byte_array(s);
-    let s = s.iter().map(|c| c ^ xor);
-    String::from_utf8(s.collect::<Vec<_>>())
-  })
-  .filter_map(|s| s.ok())
-  .max_by_key(|s| {
-    score_plaintext(s)
-  });
-
-  let x = scores.unwrap();
-  println!("{}", x);
-  x
+pub fn c4(filename: &str) -> String {
+  let lines = file_to_lines(filename);
+  let lines = lines.iter().map(|l| decode_single_char_xor(l));
+  let lines = lines.filter_map(|l| l);
+  let line = lines.max_by_key(|l| score_plaintext(l));
+  line.unwrap()
 }
 
 #[cfg(test)]
@@ -89,6 +62,14 @@ mod tests {
         assert_eq!(
           c3("1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"), 
           "cOOKING\u{0}mc\u{7}S\u{0}LIKE\u{0}A\u{0}POUND\u{0}OF\u{0}BACON"
+        );
+    }
+
+    #[test]
+    fn test_c4() {
+        assert_eq!(
+          c4("resources/s1c4.txt"), 
+          "Now that the party is jumping\n"
         );
     }
 }
