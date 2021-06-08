@@ -13,6 +13,10 @@ pub fn hex_to_byte_array(hex: &str) -> Vec<u8> {
   buf.collect::<Vec<_>>()
 }
 
+pub fn byte_array_to_utf8(hex: &str) -> String {
+  base64::encode(hex_to_byte_array(hex))
+}
+
 pub fn byte_array_to_hex(b: Vec<u8>) -> String {
   let hex = b.iter().map(|d| format!("{:x}", d));
   hex.collect::<Vec<_>>().join("")
