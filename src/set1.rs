@@ -36,6 +36,20 @@ pub fn c4(filename: &str) -> String {
   line.unwrap()
 }
 
+pub fn c5(s: &str) -> String {
+  let key = vec!['I', 'C', 'E'];
+  let mut key = key.iter().map(|c| *c as u8).cycle();
+  let s = s.as_bytes();
+
+  let s = s.iter().map(|c| {
+    c ^ key.next().unwrap()
+  });
+
+  let s = s.collect::<Vec<_>>();
+
+  byte_array_to_hex(s)
+}
+
 #[cfg(test)]
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
@@ -70,6 +84,14 @@ mod tests {
         assert_eq!(
           c4("resources/s1c4.txt"), 
           "Now that the party is jumping\n"
+        );
+    }
+
+    #[test]
+    fn test_c5() {
+        assert_eq!(
+          c5("Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal"), 
+          "0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f"
         );
     }
 }

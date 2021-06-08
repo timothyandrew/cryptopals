@@ -21,7 +21,7 @@ pub fn byte_array_to_utf8(hex: &str) -> String {
 }
 
 pub fn byte_array_to_hex(b: Vec<u8>) -> String {
-  let hex = b.iter().map(|d| format!("{:x}", d));
+  let hex = b.iter().map(|d| format!("{:01$x}", d, 2));
   hex.collect::<Vec<_>>().join("")
 }
 
