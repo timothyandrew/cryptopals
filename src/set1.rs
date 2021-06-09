@@ -1,10 +1,16 @@
+use std::collections::HashSet;
 use std::str;
 use std::collections::HashMap;
 use std::str::from_utf8;
 
+use ordered_float::OrderedFloat;
+
 use crate::util::decode_single_char_xor;
+use crate::util::decode_single_char_xor_findkey;
+use crate::util::edit_distance;
 use crate::util::file_to_lines;
 use crate::util::score_plaintext;
+use crate::util::transpose_bytes;
 use crate::util::{byte_array_to_hex, hex_to_base64, hex_to_byte_array};
 
 pub fn c1(s: &str) -> String {
@@ -25,12 +31,16 @@ pub fn c2(l: &str, r: &str) -> String {
 }
 
 pub fn c3(s: &str) -> String {
-  decode_single_char_xor(s).unwrap()
+  let s = hex_to_byte_array(s);
+  decode_single_char_xor(&s).unwrap()
 }
 
 pub fn c4(filename: &str) -> String {
   let lines = file_to_lines(filename);
-  let lines = lines.iter().map(|l| decode_single_char_xor(l));
+  let lines = lines.iter().map(|l| {
+    let l = hex_to_byte_array(l);
+    decode_single_char_xor(&l)
+  });
   let lines = lines.filter_map(|l| l);
   let line = lines.max_by_key(|l| score_plaintext(l));
   line.unwrap()
@@ -48,6 +58,41 @@ pub fn c5(s: &str) -> String {
   let s = s.collect::<Vec<_>>();
 
   byte_array_to_hex(s)
+}
+
+
+
+pub fn c6(filename: &str) -> HashSet<String> {
+  let b = file_to_lines(filename);
+  let b = b.join("");
+  let b = base64::decode(b).unwrap();
+
+  let mut keysizes = (2..=40).collect::<Vec<_>>();
+
+  keysizes.sort_by_key(|&keysize| {
+    let first = &b[0..keysize];
+    let second = &b[keysize..(keysize * 2)];
+    let third = &b[(keysize * 2)..(keysize * 3)];
+
+    // I'm still not entirely sure _why_ this works. Why exactly is it the case that 
+    // the right keysize minimizes the edit distance between chunks? 🤔
+    let dist =  edit_distance(first, second) + edit_distance(second, third) + edit_distance(first, third);
+    let dist = dist as f64 / 3.0;
+
+    OrderedFloat(dist / keysize as f64)
+  });
+
+
+  let keys = keysizes[0..4].iter().map(|keysize| {
+    let transposed = transpose_bytes(&b, *keysize);
+    let transposed = transposed.iter().map(|t| decode_single_char_xor_findkey(t).unwrap());
+    let transposed = transposed.map(|(xor, s)| xor);
+    let transposed = transposed.collect::<Vec<_>>();
+    String::from_utf8(transposed).unwrap()
+  });
+
+ 
+  keys.collect::<HashSet<_>>()
 }
 
 #[cfg(test)]
@@ -93,5 +138,11 @@ mod tests {
           c5("Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal"), 
           "0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f"
         );
+    }
+
+    #[test]
+    fn test_c6() {
+      let result = c6("resources/s1c6.txt");
+      assert!(result.contains("terminator x: bring the noise"));
     }
 }

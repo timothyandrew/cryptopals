@@ -52,15 +52,30 @@ pub fn score_plaintext(s: &str) -> usize {
   score
 }
 
-pub fn decode_single_char_xor(s: &str) -> Option<String> {
+pub fn decode_single_char_xor(s: &Vec<u8>) -> Option<String> {
   (0..=255).map(|xor| {
-    let s = hex_to_byte_array(s);
     let s = s.iter().map(|c| c ^ xor);
     String::from_utf8(s.collect::<Vec<_>>())
   })
   .filter_map(|s| s.ok())
   .max_by_key(|s| {
-    println!("{} {}", s, score_plaintext(s));
+    score_plaintext(s)
+  })
+}
+
+pub fn decode_single_char_xor_findkey(s: &Vec<u8>) -> Option<(u8, String)> {
+  (0..=255).map(|xor| {
+    let s = s.iter().map(|c| c ^ xor);
+    (xor, String::from_utf8(s.collect::<Vec<_>>()))
+  })
+  .filter_map(|(xor, s)| {
+    if let Ok(s) = s {
+      Some((xor, s))
+    } else {
+      None
+    }
+  })
+  .max_by_key(|(xor, s)| {
     score_plaintext(s)
   })
 }
@@ -70,4 +85,47 @@ pub fn file_to_lines(filename: &str) -> Vec<String> {
   let s = s.unwrap();
   let s = s.split("\n").map(|l| String::from(l.trim()));
   s.collect::<Vec<_>>()
+}
+
+pub fn edit_distance(l: &[u8], r: &[u8]) -> u32 {
+  assert!(l.len() == r.len());
+
+  let mut result = 0;
+
+  for i in 0..l.len() {
+    result += u8::count_ones(l[i] ^ r[i]);
+  }
+  
+  result
+}
+
+pub fn transpose_bytes(bytes: &Vec<u8>, chunk_size: usize) -> Vec<Vec<u8>> {
+  let chunks = bytes.chunks(chunk_size).collect::<Vec<_>>();
+
+  let transposed = (0..chunk_size).map(|n| {
+    let mut result = Vec::new();
+
+    for &chunk in &chunks {
+      if n < chunk.len() {
+        result.push(chunk[n]);
+      }
+    }
+
+    result
+  });
+
+  transposed.collect::<Vec<_>>()
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_edit_distance() {
+    let l = "this is a test".as_bytes();
+    let r = "wokka wokka!!!".as_bytes();
+
+    assert_eq!(edit_distance(l, r), 37);
+  }
 }
